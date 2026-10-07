@@ -1,15 +1,32 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SearchBar from './components/SearchBar';
 import StatusFilter from './components/StatusFilter';
 import TaskTable from './components/TaskTable';
 import { useTasks } from './hooks/useTasks';
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function App() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  const { tasks, total, loading, error } = useTasks(query, status, page, 10);
+  // Wait until typing pauses before searching, and start the new search on page 1
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleStatusChange = (value) => {
+    setStatus(value);
+    setPage(1);
+  };
+
+  const { tasks, total, loading, error } = useTasks(debouncedQuery, status, page, 10);
 
   const totalPages = Math.ceil(total / 10);
 
@@ -22,7 +39,7 @@ export default function App() {
 
       <div className="controls">
         <SearchBar value={query} onChange={setQuery} />
-        <StatusFilter value={status} onChange={setStatus} />
+        <StatusFilter value={status} onChange={handleStatusChange} />
       </div>
 
       <TaskTable tasks={tasks} loading={loading} error={error} />
